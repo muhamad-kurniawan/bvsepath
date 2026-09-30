@@ -196,7 +196,7 @@ The candidate-selection rule is simple and designed to make manual NEB setup eas
 3. Prefer an edge where exactly one endpoint minimum is occupied by the mobile ion in the input structure.
 4. Use the occupied endpoint as the initial site and the unoccupied endpoint as the target site.
 
-This is still in beta version, only work on certain problems or structures..
+This is still in beta version. And it only work on certain problems or structures..
 
 ## References
 
