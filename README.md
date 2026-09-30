@@ -214,4 +214,4 @@ B. He et al., “High-throughput screening platform for solid electrolytes combi
 
 ## Third-party data notice
 
-The software source code and the bundled parameter datasets have different provenance. See `THIRD_PARTY_PARAMETERS.md` before redistributing the parameter files.
+The software source code and the bundled parameter datasets have different provenance. See `THIRD_PARTY_PARAMETERS.md`.
