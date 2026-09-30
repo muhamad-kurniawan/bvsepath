@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/muhamad-kurniawan/bvsepath/
 cd bvsepath
 pip install -e .
 ```
