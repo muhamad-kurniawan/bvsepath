@@ -12,7 +12,7 @@ pip install -e .
 
 ## Energy landscape
 
-Only the structure, mobile ion, and oxidation states are required in normal use. The default grid resolution is 0.18 A. The default screening factor is fixed at 0.74 for backward-compatible reproducibility, while `--sf auto` enables the independent pressure-proxy optimizer.
+Only the structure, mobile ion, and oxidation states parameters are required in general use. The default grid resolution is 0.18 A. The default screening factor is fixed at 0.74 for backward-compatible reproducibility, while `--sf auto` enables the independent pressure-proxy optimizer.
 
 ```bash
 bvse-landscape CONTCAR \
