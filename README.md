@@ -1,12 +1,9 @@
 # bvsepath
 
-`bvsepath` generates bond-valence site-energy landscapes for a selected mobile ion and extracts periodic 1D, 2D, and 3D migration pathways from the resulting 3D energy landscape.
-
-The workflow is separated into two commands:
+`bvsepath` is a Python implementation for generating bond-valence site-energy landscapes and extracting periodic ion-migration pathways.
 
 ```text
-structure -> BVSE cube
-BVSE cube -> minima, saddles, directional paths, 1D/2D/3D Ecrit
+structure -> BVSE energy cube -> local minima -> basin saddles -> periodic migration graph
 ```
 
 ## Installation
@@ -17,123 +14,160 @@ cd bvsepath
 pip install -e .
 ```
 
-`elements.dat` and `bvse.dat` are bundled with the package and used automatically.
-
 ## Energy landscape
 
-### Na+
+Only the structure, mobile ion, and oxidation states are required in normal use. The default grid resolution is 0.18 A. The default screening factor is fixed at 0.74 for backward-compatible reproducibility, while `--sf auto` enables the independent pressure-proxy optimizer.
 
 ```bash
 bvse-landscape CONTCAR \
   --mobile Na \
-  --mobile-valence 1 \
-  --oxidation examples/oxidation_na.json \
-  --resolution 0.18 \
-  --sf 0.74 \
-  --output na_bvse.cube
+  --oxidation "Na=1,Co=3,Fe=3,Mg=2,Mn=7,Ni=2,O=-2" \
+  --output bvse.cube
 ```
 
-### Li+
+Li example:
 
 ```bash
 bvse-landscape POSCAR \
   --mobile Li \
-  --mobile-valence 1 \
-  --oxidation examples/oxidation_li.json \
-  --resolution 0.18 \
-  --sf 0.74 \
+  --oxidation "Li=1,La=3,Zr=4,O=-2" \
   --output li_bvse.cube
 ```
 
-### Mg2+
+Mg example:
 
 ```bash
 bvse-landscape POSCAR \
   --mobile Mg \
-  --mobile-valence 2 \
-  --oxidation examples/oxidation_mg.json \
-  --resolution 0.18 \
-  --sf 0.74 \
+  --oxidation "Mg=2,Ti=4,O=-2" \
   --output mg_bvse.cube
 ```
 
-The default pair source is `table`, which reads the bundled `bvse.dat`.
+Oxidation states may also be stored in JSON:
 
-The same interface can be used for K+, Ca2+, Ag+, Zn2+, and other ions when the required elemental and mobile-ion/anion pair entries exist in the bundled parameter tables.
-
-Oxidation states can be supplied as a JSON file or directly:
+```json
+{
+  "Na": 1,
+  "Co": 3,
+  "Fe": 3,
+  "Mg": 2,
+  "Mn": 7,
+  "Ni": 2,
+  "O": -2
+}
+```
 
 ```bash
---oxidation "Li=1,La=3,Zr=4,O=-2"
+bvse-landscape CONTCAR --mobile Na --oxidation oxidation.json --output bvse.cube
 ```
 
-The grid is generated from a real-space resolution:
+Optional numerical controls are:
 
-```text
-Ni = ceil(|ai| / resolution)
+```bash
+--resolution 0.18
+--sf 0.74
 ```
 
-`--sf auto` enables the included pressure-based screening-factor estimator:
+Automatic screening-factor optimization can be requested with:
 
 ```bash
 bvse-landscape CONTCAR \
   --mobile Na \
-  --mobile-valence 1 \
-  --oxidation examples/oxidation_na.json \
-  --resolution 0.18 \
+  --oxidation oxidation.json \
   --sf auto \
-  --output na_bvse.cube
+  --output bvse.cube
 ```
 
-The automatic screening-factor routine is an independent implementation and is not claimed to reproduce the internal softBV `sf_auto` implementation exactly.
+### Automatic screening factor: basis and implementation
 
-Advanced users can override the bundled parameter tables with `--elements` and `--bvse`.
+The `--sf auto` option is an independent implementation inspired by the screening-factor optimization described for softBV. Chen, Wong, and Adams reported that softBV estimates the screening factor by varying it iteratively so that a fast static-pressure relaxation gives a pressure close to zero. The physical idea is to tune the range of the screened same-sign Coulomb repulsion until the repulsive Coulomb contribution and the attractive/short-range Morse contribution are approximately balanced for the structure.
 
-An optional Na-specific mode is available with:
+In this package, the same physical idea is used. It uses a finite-difference pressure proxy based only on the occupied mobile-ion environment:
+
+```text
+P_proxy(sf) = - [E_mobile(V+) - E_mobile(V-)] / [V+ - V-]
+```
+
+with
+
+```text
+V- = V(1 - epsilon)^3
+V+ = V(1 + epsilon)^3
+```
+
+and a default isotropic strain
+
+```text
+epsilon = 0.001
+```
+
+For each trial screening factor, the code evaluates the occupied-mobile-ion BVSE environment in the slightly compressed and expanded cells while keeping fractional coordinates fixed. It then searches for
+
+```text
+P_proxy(sf) = 0
+```
+
+within the requested interval:
 
 ```bash
---pair-source na-published
+--sf auto
+--sf-min 0.50
+--sf-max 0.85
+--sf-strain 0.001
 ```
 
-The default is:
+If a sign change exists, the root is obtained numerically. If no root occurs inside the interval, the value that minimizes `abs(P_proxy)` is returned. The selected screening factor, search interval, residual pressure proxy, and optimization mode are written to the landscape metadata JSON.
 
-```bash
---pair-source table
-```
+This is therefore a **pressure-balance proxy**, not a reproduction of the internal softBV `sf_auto` routine. The original softBV procedure can include a more complete force-field pressure balance.
+
+The conceptual basis is:
+
+Chen, H., Wong, L. L., and Adams, S. (2019), *SoftBV – a software tool for screening the materials genome of inorganic fast ion conductors*, Acta Crystallographica Section B 75, 18-33. https://doi.org/10.1107/S2052520618015718
+
+A useful comparison is also provided by:
+
+He, B. et al. (2020), *High-throughput screening platform for solid electrolytes combining hierarchical ion-transport prediction algorithms*, Scientific Data 7, 151. https://doi.org/10.1038/s41597-020-0474-y
+
+He et al. use a fixed factor of 0.74 for high-throughput BVSE screening and explicitly contrast it with softBV, where the screening factor is iteratively adapted according to the balance between Morse and Coulomb interactions in the individual structure.
+
+Custom parameter files can be supplied with `--elements` and `--bvse`, but the package includes both files by default.
 
 ## Pathway analysis
 
 ```bash
-bvse-pathway na_bvse.cube --outdir pathway
+bvse-pathway bvse.cube --outdir pathway
 ```
 
-Outputs:
+The output directory contains:
 
 ```text
-pathway/
-  minima.csv
-  saddles.csv
-  path_a.csv
-  path_b.csv
-  path_c.csv
-  summary.json
+minima.csv
+saddles.csv
+path_a.csv
+path_b.csv
+path_c.csv
+summary.json
 ```
 
-For each pair of adjacent local minima, the conservative local barrier is
+For a local connection between minima `i` and `j`, the conservative edge barrier is
 
 ```text
-wij = max(Es - Ei, Es - Ej)
+w_ij = max(E_s - E_i, E_s - E_j)
 ```
 
-The periodic critical barrier for translation vector `t` is
+where `E_s` is the basin-boundary saddle energy.
+
+The directional periodic barrier is
 
 ```text
-Ecrit(t) = min_P max_(ij in P) wij
+Ecrit(t) = min_P max_(ij in P) w_ij
 ```
 
-If several paths have the same `Ecrit`, the representative path is selected by the shortest total path length and then the fewest hops.
+where `P` spans one lattice translation `t`.
 
-The analyzer evaluates periodic translations in three dimensions. `summary.json` reports:
+The graph search first minimizes `Ecrit`, then total path length, then hop count. This avoids arbitrary detours when several paths share the same bottleneck barrier.
+
+`summary.json` reports
 
 ```text
 Ecrit_a_eV
@@ -144,45 +178,29 @@ Ecrit_2D_eV
 Ecrit_3D_eV
 ```
 
-`Ecrit_1D`, `Ecrit_2D`, and `Ecrit_3D` are the minimum edge-barrier thresholds at which the periodic saddle graph contains translation cycles of rank 1, rank 2, and rank 3, respectively.
+The 1D, 2D, and 3D thresholds are determined from the rank of periodic translation cycles that become available as the allowed edge barrier increases.
 
-For difficult three-dimensional networks:
+For a wider three-dimensional search:
 
 ```bash
-bvse-pathway bvse.cube \
-  --outdir pathway \
-  --tile-radius 3 \
-  --max-relative 4.0
+bvse-pathway bvse.cube --outdir pathway --max-relative 6.0 --tile-radius 3
+```
+## NEB candidate guide (beta version)
+
+A third command prepares a small guide package for NEB setup.
+
+```bash
+bvse-neb-guide CONTCAR pathway --mobile Na --outdir neb_guides
 ```
 
-No fully sodiated parent structure is required. Local minima and saddle connections are obtained directly from the 3D energy landscape.
+The candidate-selection rule is simple and designed to make manual NEB setup easier:
 
-## Recommended convergence check
+1. Find the path with the requested periodic translation.
+2. Identify the highest-barrier edge along that path.
+3. Prefer an edge where exactly one endpoint minimum is occupied by the mobile ion in the input structure.
+4. Use the occupied endpoint as the initial site and the unoccupied endpoint as the target site.
 
-Evaluate representative structures at several grid resolutions, for example:
-
-```text
-0.20 A
-0.18 A
-0.15 A
-```
-
-Verify that both `Ecrit` and the critical saddle are stable.
-
-## Parameter data
-
-The bundled `elements.dat` and `bvse.dat` are taken from the CAVD release repository:
-
-Shuhebing/CAVD, release branch  
-https://gitee.com/shuhebing/cavd/tree/release
-
-If these parameter tables are used in published work, cite the CAVD source together with the relevant bond-valence and BVSE literature below.
-
-## Method scope
-
-The reported `Ecrit` values are BVSE-derived screening descriptors and should not be described as DFT or NEB activation energies. Selected hops can be validated independently by MLIP-NEB or DFT-NEB.
-
-The energy-landscape calculation follows the bond-valence site-energy framework. The pathway analyzer is an independent local-minimum, basin-saddle, and periodic minimax implementation and is not the official softBV/BVPA pathway algorithm.
+This is still in beta version, only work on certain problems or structures..
 
 ## References
 
@@ -194,4 +212,6 @@ L. L. Wong, K. C. Phuah, R. Dai, H. Chen, W. S. Chew, and S. Adams, “Bond Vale
 
 B. He et al., “High-throughput screening platform for solid electrolytes combining hierarchical ion-transport prediction algorithms,” *Scientific Data* **7**, 151 (2020). https://doi.org/10.1038/s41597-020-0474-y
 
-CAVD release repository and parameter tables: https://gitee.com/shuhebing/cavd/tree/release
+## Third-party data notice
+
+The software source code and the bundled parameter datasets have different provenance. See `THIRD_PARTY_PARAMETERS.md` before redistributing the parameter files.
