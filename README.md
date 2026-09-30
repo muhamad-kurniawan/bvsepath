@@ -2,10 +2,6 @@
 
 `bvsepath` is a Python implementation for generating bond-valence site-energy landscapes and extracting periodic ion-migration pathways.
 
-```text
-structure -> BVSE energy cube -> local minima -> basin saddles -> periodic migration graph
-```
-
 ## Installation
 
 ```bash
