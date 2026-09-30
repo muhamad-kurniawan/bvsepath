@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bvsepath"
+version = "1.2.1"
+description = "Independent BVSE energy-landscape and periodic ion-pathway analysis"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scipy>=1.10",
+  "matplotlib>=3.8"
+]
+
+[project.scripts]
+bvse-landscape = "bvsepath.cli_landscape:main"
+bvse-pathway = "bvsepath.cli_pathway:main"
+bvse-neb-guide = "bvsepath.cli_nebguide:main"
+
+[tool.setuptools.package-data]
+"bvsepath.data" = ["elements.dat", "bvse.dat"]
