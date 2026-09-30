@@ -30,15 +30,6 @@ bvse-landscape POSCAR \
   --output li_bvse.cube
 ```
 
-Mg example:
-
-```bash
-bvse-landscape POSCAR \
-  --mobile Mg \
-  --oxidation "Mg=2,Ti=4,O=-2" \
-  --output mg_bvse.cube
-```
-
 Oxidation states may also be stored in JSON:
 
 ```json
