@@ -183,7 +183,7 @@ bvse-pathway bvse.cube --outdir pathway --max-relative 6.0 --tile-radius 3
 ```
 ## NEB candidate guide (beta version)
 
-A third command prepares a small guide package for NEB setup.
+This command prepares a small guide package for NEB setup.
 
 ```bash
 bvse-neb-guide CONTCAR pathway --mobile Na --outdir neb_guides
