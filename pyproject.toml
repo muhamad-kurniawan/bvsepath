@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bvsepath"
-version = "1.2.1"
+version = "1.5.0"
 description = "Independent BVSE energy-landscape and periodic ion-pathway analysis"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,4 +21,4 @@ bvse-pathway = "bvsepath.cli_pathway:main"
 bvse-neb-guide = "bvsepath.cli_nebguide:main"
 
 [tool.setuptools.package-data]
-"bvsepath.data" = ["elements.dat", "bvse.dat"]
+"bvsepath.data" = ["softbv_pairs_2017.csv", "softbv_ion_properties.csv"]
